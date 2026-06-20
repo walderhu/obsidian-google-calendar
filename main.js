@@ -874,16 +874,12 @@ function attachDragToCreate(grid, weekStart, startHour, endHour, onCreate) {
     if (!drag?.preview || !slot || slot.day !== drag.day) return;
     const from = Math.min(drag.startHour, slot.hour);
     const to = Math.max(drag.startHour, slot.hour) + 1;
-    const first = grid.querySelector(`.wgc-cell[data-day="${drag.day}"][data-hour="${from}"]`);
-    const last = grid.querySelector(`.wgc-cell[data-day="${drag.day}"][data-hour="${to - 1}"]`);
-    if (!first || !last) return;
-    const gridRect = grid.getBoundingClientRect();
-    const firstRect = first.getBoundingClientRect();
-    const lastRect = last.getBoundingClientRect();
-    drag.preview.style.left = `${firstRect.left - gridRect.left + 4}px`;
-    drag.preview.style.top = `${firstRect.top - gridRect.top + 2}px`;
-    drag.preview.style.width = `${firstRect.width - 8}px`;
-    drag.preview.style.height = `${lastRect.bottom - firstRect.top - 4}px`;
+    drag.preview.style.gridColumn = String(drag.day + 2);
+    drag.preview.style.gridRow = `${from - startHour + 3} / span ${to - from}`;
+    drag.preview.style.left = "4px";
+    drag.preview.style.right = "4px";
+    drag.preview.style.top = "2px";
+    drag.preview.style.bottom = "2px";
   };
 
   grid.addEventListener("pointerdown", ev => {
