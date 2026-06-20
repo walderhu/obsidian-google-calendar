@@ -1,0 +1,10 @@
+{
+  "id": "weekly-google-calendar",
+  "name": "Weekly Google Calendar",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Weekly hour grid synced with Google Calendar.",
+  "author": "Local",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
