@@ -255,6 +255,17 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
         item.setText(event.allDay ? event.title : `${formatTime(event.start)} ${event.title}`);
         item.title = event.allDay ? event.title : `${event.title}\n${formatTime(event.start)}-${formatTime(event.end)}`;
         item.onclick = () => new EventDetailsModal(this.app, this, event, null).open();
+        item.ondblclick = ev => {
+          ev.stopPropagation();
+          new EventModal(this.app, async payload => {
+            try {
+              await this.createGoogleEventPayload(payload);
+              new Notice("Event created in Google Calendar.");
+            } catch (err) {
+              new Notice(`Create failed: ${err.message}`);
+            }
+          }, event.start, event.end).open();
+        };
       }
     }
   }
@@ -308,6 +319,18 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
           item.createSpan("wgc-all-day-title").setText(event.title);
           item.title = event.title;
           item.onclick = () => new EventDetailsModal(this.app, this, event, render).open();
+          item.ondblclick = ev => {
+            ev.stopPropagation();
+            new EventModal(this.app, async payload => {
+              try {
+                await this.createGoogleEventPayload(payload);
+                new Notice("Event created in Google Calendar.");
+                await render();
+              } catch (err) {
+                new Notice(`Create failed: ${err.message}`);
+              }
+            }, event.start, event.end).open();
+          };
         }
       }
 
@@ -405,6 +428,10 @@ class WeeklyCalendarView extends ItemView {
         item.createSpan("wgc-all-day-title").setText(event.title);
         item.title = event.title;
         item.onclick = () => new EventDetailsModal(this.app, this.plugin, event, () => this.refresh()).open();
+        item.ondblclick = ev => {
+          ev.stopPropagation();
+          this.promptEvent(event.start, event.end);
+        };
       }
     }
 
@@ -546,6 +573,20 @@ class EventDetailsModal extends Modal {
     details.createDiv().setText(`End: ${this.event.allDay ? toDateOnly(this.event.end) : this.event.end.toLocaleString()}`);
     details.createDiv().setText(`ID: ${this.event.id}`);
     new Setting(contentEl)
+      .addButton(button => button
+        .setButtonText("Add overlapping event")
+        .onClick(() => {
+          this.close();
+          new EventModal(this.app, async payload => {
+            try {
+              await this.plugin.createGoogleEventPayload(payload);
+              new Notice("Event created in Google Calendar.");
+              if (this.onRefresh) await this.onRefresh();
+            } catch (err) {
+              new Notice(`Create failed: ${err.message}`);
+            }
+          }, this.event.start, this.event.end).open();
+        }))
       .addButton(button => button
         .setButtonText(this.confirmDelete ? "Confirm delete" : "Delete")
         .setWarning()
@@ -784,6 +825,18 @@ function renderTimedEvents(plugin, grid, events, weekStart, startHour, endHour, 
         item.style.width = "calc(14.285714% - 8px)";
         item.style.height = `${Math.max(22, (durationMinutes / 60) * HOUR_HEIGHT - 4)}px`;
         item.onclick = () => new EventDetailsModal(plugin.app, plugin, event, onRefresh).open();
+        item.ondblclick = ev => {
+          ev.stopPropagation();
+          new EventModal(plugin.app, async payload => {
+            try {
+              await plugin.createGoogleEventPayload(payload);
+              new Notice("Event created in Google Calendar.");
+              if (onRefresh) await onRefresh();
+            } catch (err) {
+              new Notice(`Create failed: ${err.message}`);
+            }
+          }, event.start, event.end).open();
+        };
       }
     }
   });
