@@ -33,13 +33,14 @@
 .wgc-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 64px repeat(7, minmax(120px, 1fr));
+  grid-template-columns: 64px repeat(7, minmax(110px, 1fr));
   grid-template-rows: 42px auto;
   grid-auto-rows: 36px;
   overflow: auto;
   font-size: 12px;
   position: relative;
   background: #ffffff;
+  min-width: min(100%, 834px);
 }
 
 .wgc-corner,
@@ -178,6 +179,7 @@
 .wgc-event {
   position: absolute;
   z-index: 2;
+  box-sizing: border-box;
   padding: 5px 7px;
   border-left: 4px solid #0ea5e9;
   border-radius: 5px;
@@ -190,6 +192,7 @@
   pointer-events: auto;
   opacity: 1;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  min-width: 0;
 }
 
 .wgc-timed-layer {

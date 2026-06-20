@@ -769,15 +769,15 @@ function renderTimedEvents(plugin, grid, events, weekStart, startHour, endHour, 
   const layer = grid.createDiv("wgc-timed-layer");
 
   requestAnimationFrame(() => {
-    const gridRect = grid.getBoundingClientRect();
     const firstCell = grid.querySelector(".wgc-cell");
     const firstCellRect = firstCell?.getBoundingClientRect();
     if (!firstCellRect) return;
-    const dayWidth = firstCellRect.width;
 
-    layer.style.left = `${firstCellRect.left - gridRect.left}px`;
-    layer.style.top = `${firstCellRect.top - gridRect.top}px`;
-    layer.style.width = `${dayWidth * 7}px`;
+    layer.style.gridColumn = "2 / span 7";
+    layer.style.gridRow = "3 / span 1";
+    layer.style.left = "0";
+    layer.style.top = "0";
+    layer.style.width = "100%";
     layer.style.height = `${(endHour - startHour) * HOUR_HEIGHT}px`;
     layer.empty();
 
@@ -795,9 +795,9 @@ function renderTimedEvents(plugin, grid, events, weekStart, startHour, endHour, 
         item.createDiv("wgc-event-title").setText(event.title);
         item.createDiv("wgc-event-time").setText(`${formatTime(event.start)} - ${formatTime(event.end)}`);
         item.title = `${event.title}\n${formatTime(event.start)}-${formatTime(event.end)}`;
-        item.style.left = `${day * dayWidth + 4}px`;
+        item.style.left = `calc(${(day / 7) * 100}% + 4px)`;
         item.style.top = `${(offsetMinutes / 60) * HOUR_HEIGHT + 2}px`;
-        item.style.width = `${dayWidth - 8}px`;
+        item.style.width = "calc(14.285714% - 8px)";
         item.style.height = `${Math.max(22, (durationMinutes / 60) * HOUR_HEIGHT - 4)}px`;
         item.onclick = () => new EventDetailsModal(plugin.app, plugin, event, onRefresh).open();
       }
