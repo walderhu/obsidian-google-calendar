@@ -869,6 +869,15 @@ function attachDragToCreate(grid, weekStart, startHour, endHour, onCreate) {
     if (Number.isNaN(day) || Number.isNaN(hour)) return null;
     return { day, hour };
   };
+  const getSlotFromPointer = ev => {
+    const firstCell = grid.querySelector(".wgc-cell");
+    const rect = firstCell?.getBoundingClientRect();
+    if (!rect) return null;
+    const day = Math.floor((ev.clientX - rect.left) / rect.width);
+    const hour = startHour + Math.floor((ev.clientY - rect.top) / HOUR_HEIGHT);
+    if (day < 0 || day > 6 || hour < startHour || hour >= endHour) return null;
+    return { day, hour };
+  };
 
   const renderPreview = slot => {
     if (!drag?.preview || !slot || slot.day !== drag.day) return;
@@ -887,6 +896,7 @@ function attachDragToCreate(grid, weekStart, startHour, endHour, onCreate) {
     const cell = getCell(ev.target);
     const slot = getSlot(cell);
     if (!slot) return;
+    ev.preventDefault();
     drag = {
       day: slot.day,
       startHour: slot.hour,
@@ -900,8 +910,8 @@ function attachDragToCreate(grid, weekStart, startHour, endHour, onCreate) {
 
   grid.addEventListener("pointermove", ev => {
     if (!drag) return;
-    const cell = getCell(document.elementFromPoint(ev.clientX, ev.clientY));
-    const slot = getSlot(cell);
+    ev.preventDefault();
+    const slot = getSlotFromPointer(ev);
     if (!slot || slot.day !== drag.day) return;
     drag.currentHour = Math.max(startHour, Math.min(endHour - 1, slot.hour));
     renderPreview(slot);

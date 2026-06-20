@@ -170,6 +170,8 @@
 .wgc-cell {
   padding: 3px;
   background: #ffffff;
+  cursor: crosshair;
+  user-select: none;
 }
 
 .wgc-cell:hover {
