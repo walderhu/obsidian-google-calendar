@@ -219,16 +219,12 @@
   line-height: 1.2;
 }
 
-.wgc-json-form {
-  width: 100%;
-  min-height: 180px;
-  margin: 8px 0 12px;
-  padding: 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-family: var(--font-monospace);
-  font-size: 12px;
-  resize: vertical;
+.wgc-event-details {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 12px;
+  color: #4b5563;
+  font-size: 13px;
 }
 
 .wgc-mini {

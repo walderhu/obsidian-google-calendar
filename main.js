@@ -480,20 +480,13 @@ class EventModal extends Modal {
       end: { dateTime: this.end.toISOString() }
     };
 
-    const textarea = contentEl.createEl("textarea", { cls: "wgc-json-form" });
-    const syncJson = () => textarea.value = JSON.stringify(payload, null, 2);
-
     new Setting(contentEl).setName("Title").addText(text => {
       text.inputEl.focus();
-      text.onChange(value => {
-        payload.summary = value;
-        syncJson();
-      });
+      text.onChange(value => payload.summary = value);
     });
 
     new Setting(contentEl).setName("Description").addTextArea(text => text.onChange(value => {
       payload.description = value;
-      syncJson();
     }));
 
     new Setting(contentEl).setName("Start").addText(text => {
@@ -501,7 +494,6 @@ class EventModal extends Modal {
       text.setValue(toLocalDateTimeInput(this.start));
       text.onChange(value => {
         payload.start = { dateTime: new Date(value).toISOString() };
-        syncJson();
       });
     });
 
@@ -510,11 +502,8 @@ class EventModal extends Modal {
       text.setValue(toLocalDateTimeInput(this.end));
       text.onChange(value => {
         payload.end = { dateTime: new Date(value).toISOString() };
-        syncJson();
       });
     });
-
-    syncJson();
 
     new Setting(contentEl)
       .addButton(button => button
@@ -522,12 +511,11 @@ class EventModal extends Modal {
         .setCta()
         .onClick(() => {
           try {
-            const parsed = JSON.parse(textarea.value);
-            if (!parsed.summary?.trim()) throw new Error("summary is required.");
+            if (!payload.summary?.trim()) throw new Error("title is required.");
             this.close();
-            this.onSubmit(parsed);
+            this.onSubmit(payload);
           } catch (err) {
-            new Notice(`Invalid JSON form: ${err.message}`);
+            new Notice(`Create failed: ${err.message}`);
           }
         }))
       .addButton(button => button
@@ -553,14 +541,10 @@ class EventDetailsModal extends Modal {
       ? "All day"
       : `${formatTime(this.event.start)} - ${formatTime(this.event.end)}`;
     contentEl.createDiv("wgc-event-detail-time").setText(meta);
-    const textarea = contentEl.createEl("textarea", { cls: "wgc-json-form" });
-    textarea.value = JSON.stringify({
-      id: this.event.id,
-      summary: this.event.title,
-      start: this.event.allDay ? { date: toDateOnly(this.event.start) } : { dateTime: this.event.start.toISOString() },
-      end: this.event.allDay ? { date: toDateOnly(this.event.end) } : { dateTime: this.event.end.toISOString() },
-      htmlLink: this.event.htmlLink || ""
-    }, null, 2);
+    const details = contentEl.createDiv("wgc-event-details");
+    details.createDiv().setText(`Start: ${this.event.allDay ? toDateOnly(this.event.start) : this.event.start.toLocaleString()}`);
+    details.createDiv().setText(`End: ${this.event.allDay ? toDateOnly(this.event.end) : this.event.end.toLocaleString()}`);
+    details.createDiv().setText(`ID: ${this.event.id}`);
     new Setting(contentEl)
       .addButton(button => button
         .setButtonText(this.confirmDelete ? "Confirm delete" : "Delete")
