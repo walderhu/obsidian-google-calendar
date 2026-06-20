@@ -9,8 +9,8 @@
 }
 
 .wgc-embed-root {
-  height: 720px;
-  min-height: 520px;
+  height: 480px;
+  min-height: 360px;
   margin: 12px 0;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -34,8 +34,8 @@
   flex: 1;
   display: grid;
   grid-template-columns: 64px repeat(7, minmax(120px, 1fr));
-  grid-template-rows: 54px auto;
-  grid-auto-rows: 54px;
+  grid-template-rows: 42px auto;
+  grid-auto-rows: 36px;
   overflow: auto;
   font-size: 12px;
   position: relative;
@@ -56,7 +56,7 @@
   position: sticky;
   top: 0;
   z-index: 4;
-  padding: 8px;
+  padding: 6px 8px;
   background: #ffffff;
   color: #4b5563;
   font-weight: 600;
@@ -75,7 +75,7 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  padding: 6px;
+  padding: 4px 6px;
   background: #ffffff;
   color: #6b7280;
   text-align: right;
@@ -178,7 +178,7 @@
 .wgc-event {
   position: absolute;
   z-index: 2;
-  padding: 7px 8px;
+  padding: 5px 7px;
   border-left: 4px solid #0ea5e9;
   border-radius: 5px;
   background: rgba(15, 23, 42, 0.08);
@@ -210,7 +210,7 @@
 }
 
 .wgc-event-time {
-  margin-top: 2px;
+  margin-top: 1px;
   color: #4b5563;
   font-size: 11px;
   line-height: 1.2;

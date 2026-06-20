@@ -1,7 +1,7 @@
 const { ItemView, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } = require("obsidian");
 
 const VIEW_TYPE = "weekly-google-calendar";
-const HOUR_HEIGHT = 54;
+const HOUR_HEIGHT = 36;
 
 const DEFAULT_SETTINGS = {
   apiKey: "",
@@ -210,6 +210,20 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
     return await res.json();
   }
 
+  async deleteGoogleEvent(eventId) {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) throw new Error("Google authorization is required to delete events.");
+    if (!eventId) throw new Error("Event id is missing.");
+
+    const calendarId = encodeURIComponent(this.settings.calendarId || "primary");
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${encodeURIComponent(eventId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+  }
+
   async renderMiniCalendar(el) {
     el.empty();
     el.addClass("wgc-mini");
@@ -240,7 +254,7 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
         const item = col.createDiv("wgc-mini-event");
         item.setText(event.allDay ? event.title : `${formatTime(event.start)} ${event.title}`);
         item.title = event.allDay ? event.title : `${event.title}\n${formatTime(event.start)}-${formatTime(event.end)}`;
-        item.onclick = () => new EventDetailsModal(this.app, event).open();
+        item.onclick = () => new EventDetailsModal(this.app, this, event, null).open();
       }
     }
   }
@@ -293,7 +307,7 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
           item.createSpan("wgc-all-day-icon").setText("□");
           item.createSpan("wgc-all-day-title").setText(event.title);
           item.title = event.title;
-          item.onclick = () => new EventDetailsModal(this.app, event).open();
+          item.onclick = () => new EventDetailsModal(this.app, this, event, render).open();
         }
       }
 
@@ -316,7 +330,7 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
         }
       }
 
-      resizeAllDayRow(grid, () => renderTimedEvents(this.app, grid, this.events, weekStart, startHour, endHour));
+      resizeAllDayRow(grid, () => renderTimedEvents(this, grid, this.events, weekStart, startHour, endHour, render));
     };
 
     await render();
@@ -390,7 +404,7 @@ class WeeklyCalendarView extends ItemView {
         item.createSpan("wgc-all-day-icon").setText("□");
         item.createSpan("wgc-all-day-title").setText(event.title);
         item.title = event.title;
-        item.onclick = () => new EventDetailsModal(this.app, event).open();
+        item.onclick = () => new EventDetailsModal(this.app, this.plugin, event, () => this.refresh()).open();
       }
     }
 
@@ -414,7 +428,7 @@ class WeeklyCalendarView extends ItemView {
 
   renderEvents(grid) {
     const { startHour, endHour } = this.getVisibleHours();
-    renderTimedEvents(this.app, grid, this.plugin.events, this.weekStart, startHour, endHour);
+    renderTimedEvents(this.plugin, grid, this.plugin.events, this.weekStart, startHour, endHour, () => this.refresh());
   }
 
   getVisibleHours() {
@@ -523,13 +537,17 @@ class EventModal extends Modal {
 }
 
 class EventDetailsModal extends Modal {
-  constructor(app, event) {
+  constructor(app, plugin, event, onRefresh) {
     super(app);
+    this.plugin = plugin;
     this.event = event;
+    this.onRefresh = onRefresh;
+    this.confirmDelete = false;
   }
 
   onOpen() {
     const { contentEl } = this;
+    contentEl.empty();
     contentEl.createEl("h2", { text: this.event.title });
     const meta = this.event.allDay
       ? "All day"
@@ -543,10 +561,29 @@ class EventDetailsModal extends Modal {
       end: this.event.allDay ? { date: toDateOnly(this.event.end) } : { dateTime: this.event.end.toISOString() },
       htmlLink: this.event.htmlLink || ""
     }, null, 2);
-    new Setting(contentEl).addButton(button => button
-      .setButtonText("Close")
-      .setCta()
-      .onClick(() => this.close()));
+    new Setting(contentEl)
+      .addButton(button => button
+        .setButtonText(this.confirmDelete ? "Confirm delete" : "Delete")
+        .setWarning()
+        .onClick(async () => {
+          if (!this.confirmDelete) {
+            this.confirmDelete = true;
+            this.onOpen();
+            return;
+          }
+          try {
+            await this.plugin.deleteGoogleEvent(this.event.id);
+            new Notice("Event deleted from Google Calendar.");
+            this.close();
+            if (this.onRefresh) await this.onRefresh();
+          } catch (err) {
+            new Notice(`Delete failed: ${err.message}`);
+          }
+        }))
+      .addButton(button => button
+        .setButtonText("Close")
+        .setCta()
+        .onClick(() => this.close()));
   }
 }
 
@@ -728,7 +765,7 @@ function resizeAllDayRow(grid, onDone) {
   });
 }
 
-function renderTimedEvents(app, grid, events, weekStart, startHour, endHour) {
+function renderTimedEvents(plugin, grid, events, weekStart, startHour, endHour, onRefresh) {
   const layer = grid.createDiv("wgc-timed-layer");
 
   requestAnimationFrame(() => {
@@ -762,7 +799,7 @@ function renderTimedEvents(app, grid, events, weekStart, startHour, endHour) {
         item.style.top = `${(offsetMinutes / 60) * HOUR_HEIGHT + 2}px`;
         item.style.width = `${dayWidth - 8}px`;
         item.style.height = `${Math.max(22, (durationMinutes / 60) * HOUR_HEIGHT - 4)}px`;
-        item.onclick = () => new EventDetailsModal(app, event).open();
+        item.onclick = () => new EventDetailsModal(plugin.app, plugin, event, onRefresh).open();
       }
     }
   });
