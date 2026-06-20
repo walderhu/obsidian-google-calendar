@@ -341,6 +341,8 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
           const slotStart = addHours(addDays(weekStart, day), hour);
           const slotEnd = addHours(slotStart, 1);
           const cell = grid.createDiv("wgc-cell");
+          cell.dataset.day = String(day);
+          cell.dataset.hour = String(hour);
           cell.ondblclick = () => new EventModal(this.app, async payload => {
             try {
               await this.createGoogleEventPayload(payload);
@@ -353,6 +355,17 @@ module.exports = class WeeklyGoogleCalendarPlugin extends Plugin {
         }
       }
 
+      attachDragToCreate(grid, weekStart, startHour, endHour, (start, end) => {
+        new EventModal(this.app, async payload => {
+          try {
+            await this.createGoogleEventPayload(payload);
+            new Notice("Event created in Google Calendar.");
+            await render();
+          } catch (err) {
+            new Notice(`Create failed: ${err.message}`);
+          }
+        }, start, end).open();
+      });
       resizeAllDayRow(grid, () => renderTimedEvents(this, grid, this.events, weekStart, startHour, endHour, render));
     };
 
@@ -442,10 +455,13 @@ class WeeklyCalendarView extends ItemView {
         const slotStart = addHours(addDays(this.weekStart, day), hour);
         const slotEnd = addHours(slotStart, 1);
         const cell = grid.createDiv("wgc-cell");
+        cell.dataset.day = String(day);
+        cell.dataset.hour = String(hour);
         cell.ondblclick = () => this.promptEvent(slotStart, slotEnd);
       }
     }
 
+    attachDragToCreate(grid, this.weekStart, startHour, endHour, (start, end) => this.promptEvent(start, end));
     this.resizeAllDayRow(grid, () => this.renderEvents(grid));
   }
 
@@ -839,6 +855,79 @@ function renderTimedEvents(plugin, grid, events, weekStart, startHour, endHour, 
         };
       }
     }
+  });
+}
+
+function attachDragToCreate(grid, weekStart, startHour, endHour, onCreate) {
+  let drag = null;
+
+  const getCell = target => target.closest?.(".wgc-cell");
+  const getSlot = cell => {
+    if (!cell?.dataset) return null;
+    const day = Number.parseInt(cell.dataset.day, 10);
+    const hour = Number.parseInt(cell.dataset.hour, 10);
+    if (Number.isNaN(day) || Number.isNaN(hour)) return null;
+    return { day, hour };
+  };
+
+  const renderPreview = slot => {
+    if (!drag?.preview || !slot || slot.day !== drag.day) return;
+    const from = Math.min(drag.startHour, slot.hour);
+    const to = Math.max(drag.startHour, slot.hour) + 1;
+    const first = grid.querySelector(`.wgc-cell[data-day="${drag.day}"][data-hour="${from}"]`);
+    const last = grid.querySelector(`.wgc-cell[data-day="${drag.day}"][data-hour="${to - 1}"]`);
+    if (!first || !last) return;
+    const gridRect = grid.getBoundingClientRect();
+    const firstRect = first.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
+    drag.preview.style.left = `${firstRect.left - gridRect.left + 4}px`;
+    drag.preview.style.top = `${firstRect.top - gridRect.top + 2}px`;
+    drag.preview.style.width = `${firstRect.width - 8}px`;
+    drag.preview.style.height = `${lastRect.bottom - firstRect.top - 4}px`;
+  };
+
+  grid.addEventListener("pointerdown", ev => {
+    if (ev.button !== 0) return;
+    const cell = getCell(ev.target);
+    const slot = getSlot(cell);
+    if (!slot) return;
+    drag = {
+      day: slot.day,
+      startHour: slot.hour,
+      currentHour: slot.hour,
+      startedAt: { x: ev.clientX, y: ev.clientY },
+      preview: grid.createDiv("wgc-selection")
+    };
+    cell.setPointerCapture?.(ev.pointerId);
+    renderPreview(slot);
+  });
+
+  grid.addEventListener("pointermove", ev => {
+    if (!drag) return;
+    const cell = getCell(document.elementFromPoint(ev.clientX, ev.clientY));
+    const slot = getSlot(cell);
+    if (!slot || slot.day !== drag.day) return;
+    drag.currentHour = Math.max(startHour, Math.min(endHour - 1, slot.hour));
+    renderPreview(slot);
+  });
+
+  grid.addEventListener("pointerup", ev => {
+    if (!drag) return;
+    const moved = Math.abs(ev.clientX - drag.startedAt.x) + Math.abs(ev.clientY - drag.startedAt.y);
+    const fromHour = Math.min(drag.startHour, drag.currentHour);
+    const toHour = Math.max(drag.startHour, drag.currentHour) + 1;
+    const preview = drag.preview;
+    const day = drag.day;
+    drag = null;
+    preview.remove();
+    if (moved < 6 && fromHour === toHour - 1) return;
+    onCreate(addHours(addDays(weekStart, day), fromHour), addHours(addDays(weekStart, day), toHour));
+  });
+
+  grid.addEventListener("pointercancel", () => {
+    if (!drag) return;
+    drag.preview.remove();
+    drag = null;
   });
 }
 

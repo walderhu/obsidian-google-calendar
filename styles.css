@@ -205,6 +205,16 @@
   pointer-events: auto;
 }
 
+.wgc-selection {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid #0ea5e9;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 5px;
+  background: rgba(14, 165, 233, 0.16);
+  pointer-events: none;
+}
+
 .wgc-event-title {
   overflow: hidden;
   text-overflow: ellipsis;
